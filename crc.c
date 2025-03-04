@@ -25,7 +25,7 @@ crc_word_t BitsReverse(crc_word_t inVal, uint8_t width)
 /// <param name="crc">CRC结构</param>
 void CrcUpdateTable(CrcInfoType* crc)
 {
-    crc_word_t validBits = (2 << (crc->Width - 1)) - 1;
+    crc_word_t validBits = (~((crc_word_t)0) >> (sizeof(crc_word_t) * 8 - crc->Width));
     crc_word_t value;
     crc_word_t bit;
     crc_word_t i;
@@ -55,10 +55,10 @@ void CrcUpdateTable(CrcInfoType* crc)
     else
     {
         crc->Poly = (crc->Width < 8) ? (crc->Poly << (8 - crc->Width)) : crc->Poly;
-        bit = (crc->Width > 8) ? (1 << (crc->Width - 1)) : 0x80;
+        bit = (crc->Width > 8) ? ((crc_word_t)1 << (crc->Width - 1)) : 0x80;
         for (i = 0; i < 256; i++)
         {
-            value = (crc->Width > 8) ? (i << (crc->Width - 8)) : i;
+            value = (crc->Width > 8) ? ((crc_word_t)i << (crc->Width - 8)) : i;
             for (j = 0; j < 8; j++)
             {
                 if (value & bit)
@@ -112,23 +112,24 @@ crc_word_t CrcCalculate(CrcInfoType* crc, uint8_t* buf, uint32_t bufLen)
     if (!crc->TableUpdated)
         CrcUpdateTable(crc);
 
-    uint8_t high;
+    uint8_t msb;
+    crc_word_t crc_result = crc->Init;
 
     if (crc->RefIn) //逆序lsb输入
     {
-        crc->Init = BitsReverse(crc->Init, crc->Width); //init先逆序
+        crc_result = BitsReverse(crc_result, crc->Width); //init先逆序
         if (crc->Width > 8)
         {
             while (bufLen--)
             {
-                crc->Init = (crc->Init >> 8) ^ crc->Table[(crc->Init & 0xFF) ^ *buf++];
+                crc_result = (crc_result >> 8) ^ crc->Table[(crc_result & 0xFF) ^ *buf++];
             }
         }
         else
         {
             while (bufLen--)
             {
-                crc->Init = crc->Table[crc->Init ^ *buf++];
+                crc_result = crc->Table[crc_result ^ *buf++];
             }
         }
     }
@@ -139,26 +140,26 @@ crc_word_t CrcCalculate(CrcInfoType* crc, uint8_t* buf, uint32_t bufLen)
         {
             while (bufLen--)
             {
-                high = crc->Init >> (crc->Width - 8);
-                crc->Init = (crc->Init << 8) ^ crc->Table[high ^ *buf++];
+                msb = crc_result >> (crc->Width - 8);
+                crc_result = (crc_result << 8) ^ crc->Table[msb ^ *buf++];
             }
         }
         else
         {
-            crc->Init = crc->Init << (8 - crc->Width);
+            crc_result = crc_result << (8 - crc->Width);
             while (bufLen--)
             {
-                crc->Init = crc->Table[crc->Init ^ *buf++];
+                crc_result = crc->Table[crc_result ^ *buf++];
             }
-            crc->Init >>= (8 - crc->Width);
+            crc_result >>= (8 - crc->Width);
         }
     }
     if (crc->RefOut != crc->RefIn) //逆序输出
     {
-        crc->Init = BitsReverse(crc->Init, crc->Width);
+        crc_result = BitsReverse(crc_result, crc->Width);
     }
-    crc->Init ^= crc->XorOut; //异或输出
-    return crc->Init & ((2 << (crc->Width - 1)) - 1);
+    crc_result ^= crc->XorOut; //异或输出
+    return crc_result & ((2 << (crc->Width - 1)) - 1);
 }
 
 

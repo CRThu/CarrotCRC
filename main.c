@@ -18,7 +18,7 @@ int main()
 
     //CrcUpdateTable(&crc[3]);
     crc_result = CrcCalculate(&crc[3], str, sizeof(str));
-    PRINTF_DBG("CRC = 0x%X", crc_result);
+    PRINTF_DBG("CRC = 0x%X\r\n", crc_result);
     return 0;
 }
 
