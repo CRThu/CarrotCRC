@@ -92,9 +92,10 @@ void CrcTablePrint(CrcInfoType* crc)
     for (i = 0; i < 256; i++)
     {
         if (i % 16 == 0) PRINTF_DBG("\n     ");
-        if (crc->Width < 9) PRINTF_DBG("0x%02X, ", crc->Table[i]);
-        else if (crc->Width < 17) PRINTF_DBG("0x%04X, ", crc->Table[i]);
-        else PRINTF_DBG("0x%08X, ", crc->Table[i]);
+        if (crc->Width < 9) PRINTF_DBG("0x%02" PRIFMT_CRC_WORD ", ", crc->Table[i]);
+        else if (crc->Width < 17) PRINTF_DBG("0x%04" PRIFMT_CRC_WORD ", ", crc->Table[i]);
+        else if (crc->Width < 33) PRINTF_DBG("0x%08" PRIFMT_CRC_WORD ", ", crc->Table[i]);
+        else PRINTF_DBG("0x%16" PRIFMT_CRC_WORD ", ", crc->Table[i]);
     }
     PRINTF_DBG("\n};\n\n");
 }
@@ -161,5 +162,7 @@ crc_word_t CrcCalculate(CrcInfoType* crc, uint8_t* buf, uint32_t bufLen)
         crc_result = BitsReverse(crc_result, crc->Width);
     }
     crc_result ^= crc->XorOut;
-    return crc_result & ((1ULL << crc->Width) - 1);
+
+    crc_word_t validBits = (~((crc_word_t)0) >> (sizeof(crc_word_t) * 8 - crc->Width));
+    return crc_result & validBits;
 }

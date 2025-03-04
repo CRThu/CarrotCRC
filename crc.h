@@ -10,15 +10,24 @@ extern "C"
 {
 #endif
 
-#define CRC_VERSION "2.0.0"
+#define CRC_VERSION "2.1.0"
+
+#define CRC_MAX     (32)
+//#define CRC_MAX     (64)
 
 #include <stdbool.h>
 #include <stdint.h>
 
 #include <stdio.h>
+#include <inttypes.h>
 
-
-typedef uint32_t crc_word_t;
+#if CRC_MAX <= 32
+    typedef uint32_t crc_word_t;
+#define PRIFMT_CRC_WORD PRIx32
+#else
+    typedef uint64_t crc_word_t;
+#define PRIFMT_CRC_WORD PRIx64
+#endif
 
 typedef struct
 {
