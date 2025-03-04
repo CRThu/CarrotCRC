@@ -26,13 +26,14 @@ crc_word_t BitsReverse(crc_word_t inVal, uint8_t width)
 void CrcUpdateTable(CrcInfoType* crc)
 {
     crc_word_t validBits = (~((crc_word_t)0) >> (sizeof(crc_word_t) * 8 - crc->Width));
+    crc_word_t poly = crc->Poly;
     crc_word_t value;
     crc_word_t bit;
     uint8_t j;
 
     if (crc->RefIn)
     {
-        crc->Poly = BitsReverse(crc->Poly, crc->Width);
+        poly = BitsReverse(poly, crc->Width);
         for (crc_word_t i = 0; i < 256; i++)
         {
             value = i;
@@ -40,7 +41,7 @@ void CrcUpdateTable(CrcInfoType* crc)
             {
                 if (value & 1)
                 {
-                    value = (value >> 1) ^ crc->Poly;
+                    value = (value >> 1) ^ poly;
                 }
                 else
                 {
@@ -52,7 +53,7 @@ void CrcUpdateTable(CrcInfoType* crc)
     }
     else
     {
-        crc->Poly = (crc->Width < 8) ? (crc->Poly << (8 - crc->Width)) : crc->Poly;
+        poly = (crc->Width < 8) ? (poly << (8 - crc->Width)) : poly;
         bit = (crc->Width > 8) ? ((crc_word_t)1 << (crc->Width - 1)) : 0x80;
         for (crc_word_t i = 0; i < 256; i++)
         {
@@ -61,7 +62,7 @@ void CrcUpdateTable(CrcInfoType* crc)
             {
                 if (value & bit)
                 {
-                    value = (value << 1) ^ crc->Poly;
+                    value = (value << 1) ^ poly;
                 }
                 else
                 {
@@ -112,6 +113,7 @@ crc_word_t CrcCalculate(CrcInfoType* crc, uint8_t* buf, uint32_t bufLen)
 
     crc_word_t crc_result = crc->Init;
     uint8_t byte;
+    uint8_t msb;
 
     if (crc->RefIn)
     {
@@ -138,7 +140,8 @@ crc_word_t CrcCalculate(CrcInfoType* crc, uint8_t* buf, uint32_t bufLen)
             while (bufLen--)
             {
                 byte = *buf++;
-                crc_result = (crc_result << 8) ^ crc->Table[(crc_result >> (crc->Width - 8)) ^ byte];
+                msb = crc_result >> (crc->Width - 8);
+                crc_result = (crc_result << 8) ^ crc->Table[msb ^ byte];
             }
         }
         else
@@ -153,7 +156,8 @@ crc_word_t CrcCalculate(CrcInfoType* crc, uint8_t* buf, uint32_t bufLen)
         }
     }
 
-    if (crc->RefOut ^ crc->RefIn) {
+    if (crc->RefOut ^ crc->RefIn)
+    {
         crc_result = BitsReverse(crc_result, crc->Width);
     }
     crc_result ^= crc->XorOut;
